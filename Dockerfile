@@ -1,13 +1,17 @@
-FROM rust:1 as builder
+FROM golang:1.20 as builder
 
 ARG FLAPPER_VERSION
 ENV FLAPPER_VERSION = $FLAPPER_VERSION
 
 WORKDIR /app
-COPY . /app
-RUN cargo build --release
+COPY go.* ./
+RUN go mod download
 
-FROM gcr.io/distroless/cc
-COPY --from=builder /app/target/release/flapper /
+COPY . ./
+
+RUN CGO_ENABLED=0 go build -mod=readonly -o /flapper
+
+FROM gcr.io/distroless/static-debian11
+COPY --from=builder /flapper /
 EXPOSE 8080
-CMD ["./flapper"]
+CMD ["/flapper"]
