@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httplog"
 	"golang.org/x/exp/slog"
 )
 
@@ -32,9 +34,15 @@ func main() {
 	slog.Info(fmt.Sprintf("Serving environment variables at %s", cfg.EnvVarPrefix))
 	slog.Info(fmt.Sprintf("Serving version at %s", cfg.VersionPrefix))
 
-	http.HandleFunc(cfg.EnvVarPrefix, publishEnvVars)
-	http.HandleFunc(cfg.VersionPrefix, publishVersion)
-	log.Fatal(http.ListenAndServe(":"+cfg.ServerPort, nil))
+	httpLogger := httplog.NewLogger("aukai-flipper", httplog.Options{
+		JSON: false,
+	})
+
+	r := chi.NewRouter()
+	r.Use(httplog.RequestLogger(httpLogger))
+	r.Get(cfg.EnvVarPrefix, publishEnvVars)
+	r.Get(cfg.VersionPrefix, publishVersion)
+	log.Fatal(http.ListenAndServe(":"+cfg.ServerPort, r))
 }
 
 type Variable struct {
